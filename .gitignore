@@ -1,0 +1,6 @@
+data.csv
+__pycache__/utils.cpython-39.pyc
+venv
+*.pyc
+.DS_Store
+.env
