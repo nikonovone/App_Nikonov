@@ -19,7 +19,7 @@ pd.options.display.max_columns = 20
 app = Dash(__name__)
 server = app.server
 # Чтение датасета
-df = pd.read_csv("https://media.githubusercontent.com/media/nikonovone/Test_task/master/data.csv", index_col=0)
+df = pd.read_csv("https://media.githubusercontent.com/media/nikonovone/App_Nikonov/master/data.csv", index_col=0)
 #df = pd.read_csv("data.csv", index_col=0)
 
 font = dict(
@@ -27,7 +27,23 @@ font = dict(
     size=12,
 )
 
+
+# Визуализируем Топ-10 вакансий
+data = df['vacancy_custom_position'].value_counts()[:10]
+top10 = px.bar(df, x=data.index, y=data, color_discrete_sequence=['#6189c9'])
+top10.update_xaxes(tickangle=0)
+top10.update_layout(
+    xaxis=dict(
+        tickfont=dict(size=6)))
+top10.update_layout(
+    title='Топ 10 самых популярных вакансий',
+    xaxis_title="Название вакансий",
+    yaxis_title="Количество, шт",
+    font=font
+)
+
 # Мин. зарплата
+df['vacancy_salary_from'] = df['vacancy_salary_from'].replace(-1, 0)
 data = pd.Series(mstats.winsorize(
     df[df['vacancy_salary_from'] != 0]['vacancy_salary_from'], limits=[0, 0.05]))
 min_salary = px.histogram(df, x=data, marginal="box", color_discrete_sequence=['#6189c9'])
@@ -39,6 +55,7 @@ min_salary.update_layout(
 )
 
 # Макс. зарплата
+df['vacancy_salary_to'] = df['vacancy_salary_to'].replace(-1, np.nan)
 data = pd.Series(mstats.winsorize(
     df['vacancy_salary_to'].dropna(), limits=[0, 0.05]))
 max_salary = px.histogram(x=data, marginal="box",  color_discrete_sequence=['#6189c9'])
@@ -57,27 +74,14 @@ education_cat.update_layout(
     yaxis_title="Вакансии, шт",
     font=font
 )
-data = df.groupby('vacancy_offer_education_id')['vacancy_salary_from'].median().sort_values()
-education_bar = px.bar(x=data.index, y=data,  color_discrete_sequence=['#6189c9'])
-education_bar.update_layout(
-    title='Зависимость медианны минимальной зарплаты от типа образования',
-    xaxis_title="Образование",
-    yaxis_title="Медианная зарплата",
-    font=font,
-    yaxis={'categoryorder':'total ascending'}
-)
-education_bar.update_yaxes(range=[32000, 42000])
 
 y = pd.Series(mstats.winsorize(df['vacancy_salary_from'], limits=[0, 0.05]))
-education_bar2 = px.box(y=y, x=df['vacancy_offer_education_id'])
-education_bar2.update_layout(
+education_bar = px.box(y=y, x=df['vacancy_offer_education_id'], color_discrete_sequence=['#6189c9'])
+education_bar.update_layout(
     title='Распределение минимальной зарплаты в зависимости от категории образования',
     xaxis_title="Категория образования",
     yaxis_title="Зарплата, руб",
-    font=dict(
-        family="Gotham Pro Medium",
-        size=12,
-    ),
+    font=font
 )
 # Опыт работы
 df['vacancy_offer_experience_year_count'].replace(
@@ -94,26 +98,20 @@ offer_experience.update_layout(
     font=font
 )
 
-offer_experience_bar = px.box(y=y, x=df['vacancy_offer_experience_year_count'])
+offer_experience_bar = px.box(y=y, x=df['vacancy_offer_experience_year_count'], color_discrete_sequence=['#6189c9'])
 offer_experience_bar.update_layout(
     title='Распределение минимальной зарплаты в зависимости от опыта работы',
     xaxis_title="Категория образования",
     yaxis_title="Зарплата, руб",
-    font=dict(
-        family="Gotham Pro Medium",
-        size=12,
-    ),
+    font=font
 )
 # График работы
-shedule = px.box(y=y, x=df['vacancy_operating_schedule_id'])
+shedule = px.box(y=y, x=df['vacancy_operating_schedule_id'], color_discrete_sequence=['#6189c9'])
 shedule.update_layout(
     title='Распределение минимальной зарплаты в зависимости от графика работы',
     xaxis_title="График работы",
     yaxis_title="Зарплата, руб",
-    font=dict(
-        family="Gotham Pro Medium",
-        size=12,
-    ),
+    font=font
 )
 # Города
 data = pd.Series(mstats.winsorize(df['vacancy_city_id'], limits=[0, 0.05]))
@@ -141,11 +139,6 @@ correlations.update_layout(
 )
 
 
-# Срез по зарплатам городов
-#slice_cities = df[df['vacancy_salary_from'] > 10000].groupby(
-#'vacancy_city_id')[['vacancy_salary_from', 'vacancy_salary_to']].median()[:10].sort_values(
-  #  'vacancy_salary_from', ascending=False)[:10]
-
 app.layout = html.Div(
     children=[
         html.Div(
@@ -168,114 +161,204 @@ app.layout = html.Div(
                 html.Div(
                     children=[
                         dcc.Graph(
-                            id='min_salary',
-                            figure=min_salary,
+                            className='graph',
+                            figure=top10,
                         ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                        Самые популярные профессии - простые,
+                                        не требующие высоких компетенций у соискателя
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
                     ],
                     className="card",
                 ),
                 html.Div(
                     children=[
                         dcc.Graph(
-                            id='max_salary',
-                            figure=max_salary,
-                        ),
-                    ],
-                    className="card",
-                ),
-                html.Div(
-                    children=[
-                        dcc.Graph(
-                            id='education_cat',
-                            figure=education_cat,
-                        ),
-                    ],
-                    className="card",
-                ),
-                html.Div(
-                    children=[
-                        dcc.Graph(
-                            id='education_bar',
-                            figure=education_bar,
-                        ),
-                    ],
-                    className="card",
-                ),
-                html.Div(
-                    children=[
-                        dcc.Graph(
-                            id='education_bar2',
-                            figure=education_bar2,
-                        ),
-                    ],
-                    className="card",
-                ),
-                html.Div(
-                    children=[
-                        dcc.Graph(
-                            id='offer_experience',
-                            figure=offer_experience,
-                        ),
-                    ],
-                    className="card",
-                ),
-                html.Div(
-                    children=[
-                        dcc.Graph(
-                            id='offer_experience_bar',
-                            figure=offer_experience_bar,
-                        ),
-                    ],
-                    className="card",
-                ),
-                html.Div(
-                    children=[
-                        dcc.Graph(
-                            id='shedule',
+                            className='graph',
                             figure=shedule,
                         ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                        Как видно в сравнение 7 категории с остальными - от графика
+                                        работы существенно меняется медианная зарплата
+                                        Отметим, что 1 и 3 категории графика работы составляют **70%** всех вакансий в датасете
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
                     ],
                     className="card",
                 ),
                 html.Div(
                     children=[
                         dcc.Graph(
-                            id='cities',
+                            className='graph',
+                            figure=min_salary,
+                        ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                        Стоит отметить привязку пиков к круглым суммам -
+                                        30, 35, 40, 45 тысяч рублей и т.д.
+                                        Медианной минимальной зарплатой в 95% вакансий
+                                        является **40 000** рублей
+
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
+                    ],
+                    className="card",
+                ),
+                html.Div(
+                    children=[
+                        dcc.Graph(
+                            className='graph',
+                            figure=max_salary,
+                        ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                        Медианной максимальной зарплатой в 95% вакансий
+                                        является **55 000** рублей
+
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
+                    ],
+                    className="card",
+                ),
+                html.Div(
+                    children=[
+                        dcc.Graph(
+                            className='graph',
+                            figure=education_bar,
+                        ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                        В данном датасете образование не оказывает
+                                        значительное влияние на зарплату
+
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
+                    ],
+                    className="card",
+                ),
+                html.Div(
+                    children=[
+                        dcc.Graph(
+                            className='graph',
+                            figure=education_cat,
+                        ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                       В большинстве вакансий требуется образование
+                                    категории "0"
+
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
+                    ],
+                    className="card",
+                ),
+                html.Div(
+                    children=[
+                        dcc.Graph(
+                            className='graph',
+                            figure=offer_experience_bar,
+                        ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                        Можно выделить линейную зависимость от 1 до 4 лет опыта
+                                        работы, потом наблюдается плато по изменению зарплаты,
+                                        вероятно такой график можно объяснить искаженными
+                                        и не очищенными данными
+
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
+                    ],
+                    className="card",
+                ),
+                html.Div(
+                    children=[
+                        dcc.Graph(
+                            className='graph',
+                            figure=offer_experience,
+                        ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                        Медианный опыт работы требуемый в вакансиях -
+                                        **1** год. Также заметен пик на значении 3 года, что
+                                        может объясняться спросом на опытных специалистов
+
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
+                    ],
+                    className="card",
+                ),
+                
+                html.Div(
+                    children=[
+                        dcc.Graph(
+                            className='graph',
                             figure=cities,
                         ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                        На графике видно несколько пиков, вероятно это
+                                        **Москва**, **Санкт-Петербур**г и некоторые города 
+                                        миллионники, в которых сосредоточена большая часть 
+                                        вакансий. Сумма 1, 2, 57, 4, 35 категорий городов имеет **69%**
+                                        от общего количества вакансий.
+
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
                     ],
                     className="card",
                 ),
                 html.Div(
                     children=[
                         dcc.Graph(
-                            id='correlations',
+                            className='graph',
                             figure=correlations,
                         ),
+                        html.Div( 
+                            children=[
+                                dcc.Markdown('''
+                                        Явных корреляционных зависимостей нет,
+                                        кроме зарплаты от и до, что логично.
+
+                                ''')
+                            ],
+                            className='conclusion'
+                        )
                     ],
                     className="card",
                 )
             ],
             className="graphs",
         ),
-        html.Div(
-            children=[
-
-
-                html.H6(
-                    "Change the value in the text box to see callbacks in action!"),
-                html.Div([
-                    "Input: ",
-                    
-                    dcc.Input(id='my-input',
-                              value='initial value', type='text')
-                ]),
-                html.Br(),
-                html.Div(id='my-output'),
-
-
-            ]
-        )
     ]
 )
 
