@@ -1,7 +1,16 @@
 # Разведочный анализ данных
-Визуализация разведочного анализа данных - [Кликни меня](https://nikonovone.herokuapp.com/)
-    
+Визуализация разведочного анализа данных - [Кликни меня](https://nikonovone.herokuapp.com/) 
+
+Если по каким-то причинам хостинг перестанет работать, вот:
+<details> 
+  <summary>
+   Снимок сайта 
+  </summary>
+  <img src="https://github.com/nikonovone/App_Nikonov/blob/master/snap.png"/>
+</details>
+
 [Ноутбук](baseline.ipynb) с кодом и графиками 
+
 # Поля, которые будут использоваться для поиска вакансий соискателями
 
 - **vacancy_custom_position**
